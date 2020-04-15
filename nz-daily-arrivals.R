@@ -19,7 +19,7 @@ conflict_prefer("filter", "dplyr")
 # *****************************************************************************
 # Load data ---- 
 
-data_file <- "daily-movements-across-nz-border-Jan-Mar-2019-2020-2020-05-03.xlsx"
+data_file <- "daily-movements-across-nz-border-Jan-Mar-2019-2020-2020-04-15.xlsx"
 
 # Daily movements data
 movements_dat <- read_excel(path = here(paste0("data/", data_file)), 
@@ -60,17 +60,17 @@ last_14_days_arrivals <- daily_arrivals_totals %>%
   separate(col = arrivals.year, into = c("junk", "year"), convert = TRUE) %>%
   select(-junk) %>%
   arrange(year, month, day) %>%
-  group_by(year, month) %>%
+  group_by(year) %>%
   mutate(dayorder = row_number()) %>%
   mutate(xlabel = paste0(month.abb[month], " ", day))
 
 chart_last_14_days_arrivals <- last_14_days_arrivals %>%
-  ggplot(mapping = aes(x = fct_reorder(.f = xlabel, 
-                                       .x = dayorder), 
+  mutate(ylabel = ifelse(arrivals > 1000, 
+                         paste0(format_decimal_label(x = arrivals / 1000, dp = 1), "k"), 
+                         format_decimal_label(x = arrivals, dp = 0))) %>%
+  ggplot(mapping = aes(x = fct_reorder(.f = xlabel, .x = dayorder), 
                        y = arrivals, 
-                       label = paste0(format_decimal_label(x = arrivals / 1000, 
-                                                           dp = 1), 
-                                      "k"), 
+                       label = ylabel, 
                        fill = as.factor(year), 
                        colour = as.factor(year))) + 
   geom_col(position = position_dodge(), 
