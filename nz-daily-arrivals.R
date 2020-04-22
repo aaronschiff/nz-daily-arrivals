@@ -19,7 +19,7 @@ conflict_prefer("filter", "dplyr")
 # *****************************************************************************
 # Load data ---- 
 
-data_file <- "daily-movements-across-nz-border-Jan-Mar-2019-2020-2020-04-15.xlsx"
+data_file <- "daily-movements-across-nz-border-Jan-Mar-2019-2020-2020-04-22.xlsx"
 
 # Daily movements data
 movements_dat <- read_excel(path = here(paste0("data/", data_file)), 
@@ -38,7 +38,7 @@ daily_arrivals_totals <- movements_dat %>%
 
 
 # *****************************************************************************
-# Create charts ---
+# Last 14 days chart ---
 
 # Total daily arrivals in the most recent 14 days of 2020 and the same days
 # in 2019 for comparison
@@ -105,3 +105,62 @@ last_14_days_total_arrivals <- daily_arrivals_totals %>%
 paste0("Total arrivals in 14 days to ", latest_date, ": ", last_14_days_total_arrivals)
 
 # ***************************************************************************** 
+
+
+# *****************************************************************************
+# Timeseries since 1 Jan ----
+
+daily_arrivals_comparison <- daily_arrivals_totals %>%
+  filter(year == 2020) %>%
+  rename(arrivals.2020 = arrivals) %>%
+  select(-date) %>%
+  left_join(y = daily_arrivals_totals %>%
+              filter(year == 2019) %>%
+              select(month, day, arrivals.2019 = arrivals), 
+            by = c("month", "day")) %>%
+  pivot_longer(cols = c(arrivals.2020, arrivals.2019), 
+               names_to = "arrivals.year", 
+               values_to = "arrivals") %>%
+  separate(col = arrivals.year, into = c("junk", "year"), convert = TRUE) %>%
+  select(-junk) %>%
+  arrange(year, month, day) %>%
+  group_by(year) %>%
+  mutate(dayorder = row_number()) %>%
+  mutate(weekorder = floor((dayorder - 1) / 7)) %>%
+  mutate(dayofweek = dayorder - weekorder * 7) %>%
+  mutate(xlabel = ifelse(dayofweek == 1, 
+                         str_wrap(paste0(day, " ", month.abb[month]), 3), 
+                         NA_character_))
+
+xlabs <- daily_arrivals_comparison %>%
+  filter(!is.na(xlabel))
+
+chart_daily_arrivals_comparison <- daily_arrivals_comparison %>%
+  ggplot(mapping = aes(x = dayorder, 
+                       y = arrivals, 
+                       group = as.factor(year), 
+                       colour = as.factor(year))) + 
+  geom_line() +
+  scale_colour_manual(values = c("2019" = grey(0.75), 
+                                 "2020" = "darkorange"), 
+                      aesthetics = c("colour", "fill"), 
+                      name = NULL) + 
+  scale_x_continuous(breaks = xlabs$dayorder, 
+                     labels = xlabs$xlabel, 
+                     expand = expansion(0, 0)) + 
+  scale_y_continuous(labels = label_comma(), 
+                     limits = c(0, 30000), 
+                     breaks = seq(0, 30000, 5000))
+
+output_chart(chart = chart_daily_arrivals_comparison, 
+             path = "outputs", 
+             xlab = "", 
+             ylab = "", 
+             ggtitle = "Daily international arrivals to New Zealand", 
+             orientation = "wide", 
+             legend_position = "top", 
+             plot.margin = margin(16, 20, 0, 0, unit = "pt"), 
+             panel.grid.major.x = element_line(size = 0.2, colour = grey(0.9)), 
+             axis.ticks.x = element_blank())
+
+# *****************************************************************************
