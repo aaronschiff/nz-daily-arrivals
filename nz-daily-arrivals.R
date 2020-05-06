@@ -19,7 +19,7 @@ conflict_prefer("filter", "dplyr")
 # *****************************************************************************
 # Load data ---- 
 
-data_file <- "daily-movements-across-nz-border-2020-04-29.xlsx"
+data_file <- "daily-movements-across-nz-border-2020-05-06.xlsx"
 
 # Daily movements data
 movements_dat <- read_excel(path = here(paste0("data/", data_file)), 
