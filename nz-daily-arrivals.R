@@ -9,6 +9,7 @@ library(readxl)
 library(my.r.functions)
 library(janitor)
 library(scales)
+library(RcppRoll)
 
 conflict_prefer("here", "here")
 conflict_prefer("filter", "dplyr")
@@ -19,7 +20,7 @@ conflict_prefer("filter", "dplyr")
 # *****************************************************************************
 # Load data ---- 
 
-data_file <- "daily-movements-across-nz-border-2020-05-06.xlsx"
+data_file <- "daily-movements-across-nz-border-2020-06-24.xlsx"
 
 # Daily movements data
 movements_dat <- read_excel(path = here(paste0("data/", data_file)), 
@@ -30,9 +31,16 @@ movements_dat <- read_excel(path = here(paste0("data/", data_file)),
 # Daily arrivals totals
 daily_arrivals_totals <- movements_dat %>%
   filter(direction_code == "A") %>%
-  group_by(year, month, day, date) %>%
+  group_by(date) %>%
   summarise(arrivals = sum(total_movements)) %>%
-  ungroup()
+  ungroup() %>%
+  complete(date = seq(from = min(movements_dat$date), 
+                      to = max(movements_dat$date), 
+                      by = "1 day"), 
+           fill = list(arrivals = 0)) %>%
+  mutate(year = year(date), 
+         month = month(date), 
+         day = day(date))
 
 # *****************************************************************************
 
@@ -84,17 +92,17 @@ chart_last_14_days_arrivals <- last_14_days_arrivals %>%
                       aesthetics = c("colour", "fill"), 
                       name = NULL) + 
   scale_y_continuous(labels = label_comma(), 
-                     limits = c(0, 25000), 
+                     limits = c(0, 20000), 
                      breaks = seq(0, 25000, 5000))
 
 output_chart(chart = chart_last_14_days_arrivals, 
              path = "outputs", 
-             xlab = "", 
-             ylab = "", 
+             xlab = "Arrival date", 
+             ylab = "Number of arrivals", 
              ggtitle = "Daily international arrivals to New Zealand", 
              orientation = "wide", 
              legend_position = "top", 
-             plot.margin = margin(16, 20, 0, 0, unit = "pt"))
+             plot.margin = margin(8, 4, 4, 4, unit = "pt"))
 
 # Calculate total arrivals in last 14 days
 last_14_days_total_arrivals <- daily_arrivals_totals %>%
@@ -154,13 +162,143 @@ chart_daily_arrivals_comparison <- daily_arrivals_comparison %>%
 
 output_chart(chart = chart_daily_arrivals_comparison, 
              path = "outputs", 
-             xlab = "", 
-             ylab = "", 
+             xlab = "Arrival date", 
+             ylab = "Number of arrivals", 
              ggtitle = "Daily international arrivals to New Zealand", 
              orientation = "wide", 
              legend_position = "top", 
-             plot.margin = margin(16, 20, 0, 0, unit = "pt"), 
+             plot.margin = margin(8, 4, 4, 4, unit = "pt"),
              panel.grid.major.x = element_line(size = 0.2, colour = grey(0.9)), 
              axis.ticks.x = element_blank())
+
+# *****************************************************************************
+
+
+# *****************************************************************************
+# Daily arrivals since lockdown ----
+
+daily_arrivals_since_lockdown <- daily_arrivals_totals %>%
+  mutate(arrivals_14days = roll_sum(x = arrivals, 
+                                    n = 14, 
+                                    align = "right", 
+                                    fill = NA)) %>%
+  filter(date > ymd("2020-03-25"))
+
+chart_daily_arrivals_since_lockdown <- 
+  daily_arrivals_since_lockdown %>%
+  ggplot(mapping = aes(x = date, 
+                       y = arrivals)) + 
+  geom_col() + 
+  geom_vline(xintercept = ymd("2020-03-26") - 0.5, colour = "red", size = 0.5) + 
+  geom_vline(xintercept = ymd("2020-04-28") - 0.5, colour = "darkorange", size = 0.5) + 
+  geom_vline(xintercept = ymd("2020-05-14") - 0.5, colour = "darkgoldenrod1", size = 0.5) + 
+  geom_vline(xintercept = ymd("2020-06-09") - 0.5, colour = "cornflowerblue", size = 0.5) + 
+  annotate(geom = "text", 
+           x = ymd("2020-03-26") + 0.5, 
+           y = 1650, 
+           label = "Level 4", 
+           colour = "red", 
+           hjust = 0, 
+           family = "Fira Sans", 
+           fontface = "bold", 
+           size = 3) +
+  annotate(geom = "text", 
+           x = ymd("2020-04-28") + 0.5, 
+           y = 1650, 
+           label = "Level 3", 
+           colour = "darkorange", 
+           hjust = 0, 
+           family = "Fira Sans", 
+           fontface = "bold", 
+           size = 3) +
+  annotate(geom = "text", 
+           x = ymd("2020-05-14") + 0.5, 
+           y = 1650, 
+           label = "Level 2", 
+           colour = "darkgoldenrod1", 
+           hjust = 0, 
+           family = "Fira Sans", 
+           fontface = "bold", 
+           size = 3) + 
+  annotate(geom = "text", 
+           x = ymd("2020-06-09") + 0.5, 
+           y = 1650, 
+           label = "Level 1", 
+           colour = "cornflowerblue", 
+           hjust = 0, 
+           family = "Fira Sans", 
+           fontface = "bold", 
+           size = 3) + 
+  scale_y_continuous(limits = c(0, 1700), 
+                     breaks = seq(0, 1700, 100), 
+                     labels = comma, 
+                     expand = expansion(0, 0)) + 
+  scale_x_date(breaks = c(ymd("2020-04-01", "2020-04-15", 
+                              "2020-05-01", "2020-05-15", 
+                              "2020-06-01", "2020-06-15")), 
+               labels = date_format(format = "%d %b"), 
+               limits = c(ymd("2020-03-24"), 
+                          max(daily_arrivals_since_lockdown$date) + 2), 
+               expand = expansion(0, 0))
+
+output_chart(chart = chart_daily_arrivals_since_lockdown, 
+             path = here("outputs"), 
+             orientation = "wide", 
+             xlab = "Arrival date", 
+             ylab = "Number of arrivals", 
+             ggtitle = "Daily international arrivals to New Zealand", 
+             plot.margin = margin(8, 4, 4, 4, unit = "pt"))
+
+# *****************************************************************************
+
+
+# *****************************************************************************
+# Cumulative arrivals over previous 14 days since level 2 ----
+
+chart_cumulative_14day_arrivals_since_level2 <- 
+  daily_arrivals_since_lockdown %>%
+  filter(date > ymd("2020-05-13")) %>%
+  ggplot(mapping = aes(x = date, 
+                       y = arrivals_14days)) + 
+  geom_col() + 
+  geom_vline(xintercept = ymd("2020-05-14") - 0.5, colour = "darkgoldenrod1", size = 0.5) + 
+  geom_vline(xintercept = ymd("2020-06-09") - 0.5, colour = "cornflowerblue", size = 0.5) + 
+  annotate(geom = "text", 
+           x = ymd("2020-05-14"), 
+           y = 4250, 
+           label = "Level 2", 
+           colour = "darkgoldenrod1", 
+           hjust = 0, 
+           family = "Fira Sans", 
+           fontface = "bold", 
+           size = 3) + 
+  annotate(geom = "text", 
+           x = ymd("2020-06-09"), 
+           y = 4250, 
+           label = "Level 1", 
+           colour = "cornflowerblue", 
+           hjust = 0, 
+           family = "Fira Sans", 
+           fontface = "bold", 
+           size = 3) +
+  scale_y_continuous(limits = c(0, 4500),
+                     breaks = seq(0, 4500, 500),
+                     labels = comma,
+                     expand = expansion(0, 0)) + 
+  scale_x_date(breaks = seq(from = ymd("2020-05-14"), 
+                            by = "1 week", 
+                            length.out = 7),
+               labels = date_format(format = "%d %b"),
+               limits = c(ymd("2020-05-13"),
+                          max(daily_arrivals_since_lockdown$date) + 1),
+               expand = expansion(0, 0))
+
+output_chart(chart = chart_cumulative_14day_arrivals_since_level2, 
+             path = here("outputs"), 
+             orientation = "wide", 
+             xlab = "14 days ending on", 
+             ylab = "Total number of arrivals", 
+             ggtitle = "International arrivals to New Zealand in the past 14 days", 
+             plot.margin = margin(8, 4, 4, 4, unit = "pt"))
 
 # *****************************************************************************
