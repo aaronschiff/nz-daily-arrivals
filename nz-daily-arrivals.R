@@ -20,7 +20,7 @@ conflict_prefer("filter", "dplyr")
 # *****************************************************************************
 # Load data ---- 
 
-data_file <- "daily-movements-across-nz-border-2020-06-24.xlsx"
+data_file <- "daily-movements-across-nz-border-2020-07-01.xlsx"
 
 # Daily movements data
 movements_dat <- read_excel(path = here(paste0("data/", data_file)), 
@@ -92,7 +92,7 @@ chart_last_14_days_arrivals <- last_14_days_arrivals %>%
                       aesthetics = c("colour", "fill"), 
                       name = NULL) + 
   scale_y_continuous(labels = label_comma(), 
-                     limits = c(0, 20000), 
+                     limits = c(0, 25000), 
                      breaks = seq(0, 25000, 5000))
 
 output_chart(chart = chart_last_14_days_arrivals, 
@@ -281,8 +281,8 @@ chart_cumulative_14day_arrivals_since_level2 <-
            family = "Fira Sans", 
            fontface = "bold", 
            size = 3) +
-  scale_y_continuous(limits = c(0, 4500),
-                     breaks = seq(0, 4500, 500),
+  scale_y_continuous(limits = c(0, 5100),
+                     breaks = seq(0, 5000, 500),
                      labels = comma,
                      expand = expansion(0, 0)) + 
   scale_x_date(breaks = seq(from = ymd("2020-05-14"), 
