@@ -20,7 +20,7 @@ conflict_prefer("filter", "dplyr")
 # *****************************************************************************
 # Load data ---- 
 
-data_file <- "daily-movements-across-nz-border-2020-07-01.xlsx"
+data_file <- "daily-movements-across-nz-border-2020-07-08.xlsx"
 
 # Daily movements data
 movements_dat <- read_excel(path = here(paste0("data/", data_file)), 
@@ -235,7 +235,8 @@ chart_daily_arrivals_since_lockdown <-
                      expand = expansion(0, 0)) + 
   scale_x_date(breaks = c(ymd("2020-04-01", "2020-04-15", 
                               "2020-05-01", "2020-05-15", 
-                              "2020-06-01", "2020-06-15")), 
+                              "2020-06-01", "2020-06-15", 
+                              "2020-07-01", "2020-07-15")), 
                labels = date_format(format = "%d %b"), 
                limits = c(ymd("2020-03-24"), 
                           max(daily_arrivals_since_lockdown$date) + 2), 
@@ -281,13 +282,13 @@ chart_cumulative_14day_arrivals_since_level2 <-
            family = "Fira Sans", 
            fontface = "bold", 
            size = 3) +
-  scale_y_continuous(limits = c(0, 5100),
-                     breaks = seq(0, 5000, 500),
+  scale_y_continuous(limits = c(0, 6000),
+                     breaks = seq(0, 6000, 500),
                      labels = comma,
                      expand = expansion(0, 0)) + 
   scale_x_date(breaks = seq(from = ymd("2020-05-14"), 
                             by = "1 week", 
-                            length.out = 7),
+                            length.out = 10),
                labels = date_format(format = "%d %b"),
                limits = c(ymd("2020-05-13"),
                           max(daily_arrivals_since_lockdown$date) + 1),
